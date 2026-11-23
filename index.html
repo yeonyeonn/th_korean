@@ -151,7 +151,7 @@ details.rx .rx-q{grid-template-columns:26px 1fr auto}
 
 <script>
 const MODE = "batch"; // "batch": 마지막에 모아 보기 / "instant": O 고를 때마다 바로 보기
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbxsvXk0ymhfbVNWKAqwCKFdEA2CudVyaBXX8FKUV2Aw6QUXmZgKkLcuM2N7Uz2wtayC/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbxsvXk0ymhfbVNWKAqwCKFdEA2CudVyaBXX8FKUV2Aw6QUXmZgKkLcuM2N7Uz2wtayC/exec"; // ← Apps Script 웹 앱 주소를 따옴표 안에 붙여넣기. 비워두면 저장 안 함
 const CONSENT = "입력한 이름과 답변이 이태형T 국어 상담 자료로 사용되는 것에 동의합니다."; // 동의 문구
 /* ===== 문항 데이터: 이 부분만 고치면 됩니다 ===== */
 const AREAS = [
@@ -326,7 +326,6 @@ function result(){
   const areas=AREAS.filter(a=>selected.has(a.key));
   const picked=a=>a.items.filter(it=>answers[it.id]==='O');
   const totalO=areas.reduce((n,a)=>n+picked(a).length,0);
-  const max=Math.max(...areas.map(a=>picked(a).length));
   const who=student.name;
   const item=it=>MODE==='instant'
     ? `<details class="rx"><summary class="rx-q"><i>${it.no}</i><span>${esc(it.q)}</span></summary><ul>${it.sol.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></details>`
@@ -334,7 +333,7 @@ function result(){
   paint(`
     <div><p class="who">${esc(who)}</p><h2>${totalO?`체크한 고민 ${totalO}개`:'체크한 고민이 없어요'}</h2></div>
     ${SHEET_URL?'<p class="save" id="save"></p>':''}
-    <div class="score">${areas.map(a=>{const n=picked(a).length;return `<div class="${n&&n===max?'top':''}"><b>${a.name}</b><span><em>${n}</em> / ${a.items.length}</span></div>`}).join('')}</div>
+    <div class="score">${areas.map(a=>{const n=picked(a).length;return `<div><b>${a.name}</b><span><em>${n}</em> / ${a.items.length}</span></div>`}).join('')}</div>
     ${areas.filter(a=>picked(a).length).map(a=>`<div class="sec"><h3>${a.name}</h3>${picked(a).map(item).join('')}</div>`).join('')}
     <div class="btns"><button class="secondary" id="copy" ${totalO?'':'disabled'}>결과 복사</button><button class="primary" id="again">다시 풀기</button></div>
     <p class="toast" id="toast"></p>
