@@ -151,7 +151,7 @@ details.rx .rx-q{grid-template-columns:26px 1fr auto}
 
 <script>
 const MODE = "instant"; // "batch": 마지막에 모아 보기 / "instant": O 고를 때마다 바로 보기
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbxsvXk0ymhfbVNWKAqwCKFdEA2CudVyaBXX8FKUV2Aw6QUXmZgKkLcuM2N7Uz2wtayC/exec"; // ← Apps Script 웹 앱 주소를 따옴표 안에 붙여넣기. 비워두면 저장 안 함
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbxsvXk0ymhfbVNWKAqwCKFdEA2CudVyaBXX8FKUV2Aw6QUXmZgKkLcuM2N7Uz2wtayC/exec";
 const CONSENT = "입력한 이름과 답변이 이태형T 국어 상담 자료로 사용되는 것에 동의합니다."; // 동의 문구
 /* ===== 문항 데이터: 이 부분만 고치면 됩니다 ===== */
 const AREAS = [
@@ -336,11 +336,11 @@ function result(){
     ${SHEET_URL?'<p class="save" id="save"></p>':''}
     <div class="score">${areas.map(a=>{const n=picked(a).length;return `<div class="${n&&n===max?'top':''}"><b>${a.name}</b><span><em>${n}</em> / ${a.items.length}</span></div>`}).join('')}</div>
     ${areas.filter(a=>picked(a).length).map(a=>`<div class="sec"><h3>${a.name}</h3>${picked(a).map(item).join('')}</div>`).join('')}
-    <div class="btns"><button class="secondary" id="copy" ${totalO?'':'disabled'}>결과 복사</button><button class="primary" id="again">다음 학생</button></div>
+    <div class="btns"><button class="secondary" id="copy" ${totalO?'':'disabled'}>결과 복사</button><button class="primary" id="again">다시 풀기</button></div>
     <p class="toast" id="toast"></p>
     <div id="copyFallback"></div>
     <div class="nav"><button class="link" id="fix">마지막 답 고치기</button></div>`, '진단 결과', false);
-  document.getElementById('again').onclick=()=>{answers={};selected.clear();student={name:'',agree:false};start();};
+  document.getElementById('again').onclick=()=>{answers={};begin();};
   document.getElementById('fix').onclick=()=>{idx=queue.length-1;question();};
   document.getElementById('copy').onclick=()=>{
     const txt=`[이태형T 국어 O/X 결과] ${who}\n`+areas.map(a=>{const p=picked(a);
@@ -361,15 +361,19 @@ function result(){
 
 async function save(payload){
   const el=document.getElementById('save'); if(!el) return;
-  el.className='save'; el.textContent='결과 저장 중…';
+  el.className='save';
+  let left=5; el.textContent=`결과 저장 중… 약 ${left}초 남았어요`;
+  const tick=setInterval(()=>{ left--; el.textContent=left>0?`결과 저장 중… 약 ${left}초 남았어요`:'결과 저장 중… 거의 다 됐어요'; },1000);
+  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),20000);
   try{
-    const r=await fetch(SHEET_URL,{method:'POST',body:JSON.stringify(payload)});
-    const j=await r.json(); if(!j.ok) throw new Error(j.error||'fail');
+    const r=await fetch(SHEET_URL,{method:'POST',body:JSON.stringify(payload),signal:ctl.signal});
+    const j=await r.json(); if(!j.ok) throw new Error(j.error||'저장 실패');
     el.className='save ok'; el.textContent='결과가 저장됐어요.';
   }catch(e){
-    el.className='save err'; el.innerHTML='저장하지 못했어요. 인터넷 연결을 확인하고 <button class="link" id="retry">다시 저장</button>';
+    el.className='save err';
+    el.innerHTML=`저장하지 못했어요. <button class="link" id="retry">다시 저장</button><br><small>${esc(e.name==='AbortError'?'응답 시간 초과':(e.message||String(e)))}</small>`;
     document.getElementById('retry').onclick=()=>save(payload);
-  }
+  }finally{ clearInterval(tick); clearTimeout(to); }
 }
 
 document.addEventListener('keydown',e=>{ if(screen!=='q'||e.metaKey||e.ctrlKey) return;
